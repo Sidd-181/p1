@@ -1,0 +1,20 @@
+# Local environment configuration
+backend/.env
+backend/.env.*
+frontend/.env
+frontend/.env.*
+
+# Keep example templates tracked
+!backend/.env.example
+!frontend/.env.example
+
+# Dependencies and generated output
+backend/node_modules/
+frontend/node_modules/
+frontend/dist/
+frontend/out/
+
+# Local Mastra memory store
+backend/mastra.db
+backend/mastra.db-shm
+backend/mastra.db-wal
