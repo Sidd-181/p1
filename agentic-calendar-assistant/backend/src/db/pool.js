@@ -7,7 +7,9 @@ export function getPool() {
     const connectionString = process.env.DATABASE_URL;
 
     if (!connectionString) {
-      throw new Error("DATABASE_URL is not set here");
+      throw new Error(
+        "DATABASE_URL is not set. Create backend/.env from backend/.env.example and start the PostgreSQL service."
+      );
     }
 
     pool = new Pool({ connectionString });
