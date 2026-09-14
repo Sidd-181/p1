@@ -4,6 +4,7 @@ import { getPool } from "./db/pool.js";
 import { agentRoutes } from "./routes/agent.routes.js";
 import { authRouter } from "./routes/auth.routes.js";
 import { connectionRouter } from "./routes/connection.routes.js";
+import { calendarRouter } from "./routes/calendar.routes.js";
 import { mountMcpServer } from "./mcp/mount.js";
 
 export function createApp(deps = {}) {
@@ -36,6 +37,7 @@ export function createApp(deps = {}) {
 
   app.use("/api/auth", authRouter);
   app.use("/api/connections", connectionRouter);
+  app.use("/api/calendar", calendarRouter);
   app.use("/api/agent", agentRoutes);
 
   mountMcpServer(app);

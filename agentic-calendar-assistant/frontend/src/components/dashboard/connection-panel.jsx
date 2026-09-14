@@ -8,6 +8,7 @@ import {
   fetchCalendarConnection,
   refreshCalendarConnection,
 } from "@/lib/connections";
+import CalendarPanel from "./calendar-panel";
 
 const styles = {
   root: "space-y-1.5",
@@ -88,47 +89,50 @@ function ConnectionsPanel({ sessionToken }) {
       {loading || !connection ? (
         <Skeleton className={styles.skeleton} />
       ) : (
-        <div className={styles.row}>
-          <div
-            className={cn(
-              styles.iconBox,
-              connected ? styles.iconBoxConnected : styles.iconBoxDisconnected,
-            )}
-          >
-            <CalendarDays className={styles.icon} />
-          </div>
-          <div className={styles.meta}>
-            <p className={styles.label}>{connection.label}</p>
-
-            <p
+        <>
+          <div className={styles.row}>
+            <div
               className={cn(
-                styles.status,
-                connected ? styles.statusConnected : styles.statusDisconnected,
+                styles.iconBox,
+                connected ? styles.iconBoxConnected : styles.iconBoxDisconnected,
               )}
             >
-              {statusLabel(connection.status)}
-            </p>
-          </div>
-          <Button
-            size="sm"
-            variant={connected ? "ghost" : "default"}
-            className={styles.actionBtn}
-            disabled={busy}
-            onClick={() => handleCalendarConnect()}
-          >
-            {connected ? "Reconnect" : "Connect"}
-          </Button>
+              <CalendarDays className={styles.icon} />
+            </div>
+            <div className={styles.meta}>
+              <p className={styles.label}>{connection.label}</p>
 
-          <Button
-            size="icon-sm"
-            variant={"ghost"}
-            className={styles.refreshBtn}
-            disabled={busy}
-            onClick={() => handleCalendarRefresh()}
-          >
-            <RefreshCcw className={styles.refreshIcon} />
-          </Button>
-        </div>
+              <p
+                className={cn(
+                  styles.status,
+                  connected ? styles.statusConnected : styles.statusDisconnected,
+                )}
+              >
+                {statusLabel(connection.status)}
+              </p>
+            </div>
+            <Button
+              size="sm"
+              variant={connected ? "ghost" : "default"}
+              className={styles.actionBtn}
+              disabled={busy}
+              onClick={() => handleCalendarConnect()}
+            >
+              {connected ? "Reconnect" : "Connect"}
+            </Button>
+
+            <Button
+              size="icon-sm"
+              variant={"ghost"}
+              className={styles.refreshBtn}
+              disabled={busy}
+              onClick={() => handleCalendarRefresh()}
+            >
+              <RefreshCcw className={styles.refreshIcon} />
+            </Button>
+          </div>
+          <CalendarPanel sessionToken={sessionToken} connected={connected} />
+        </>
       )}
     </div>
   );

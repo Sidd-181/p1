@@ -9,10 +9,16 @@ export const CALENDAR_SCOPES = [
 ];
 
 export function getGoogleConfig() {
+  const configuredCalendarId = process.env.GOOGLE_CALENDAR_ID?.trim();
+
   return {
     clientId: process.env.GOOGLE_CLIENT_ID ?? "",
     clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
     redirectUri: process.env.GOOGLE_REDIRECT_URI ?? "",
+    calendarId:
+      configuredCalendarId && configuredCalendarId !== "google-calendar"
+        ? configuredCalendarId
+        : "primary",
   };
 }
 

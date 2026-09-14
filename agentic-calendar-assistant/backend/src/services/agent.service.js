@@ -1,11 +1,6 @@
-import { Agent } from "@mastra/core/agent";
+import { OpenRouter } from "@openrouter/sdk";
 import { createAgentMemory } from "../config/memory.js";
 import { getAgentInstructions } from "../config/agent-instructions.js";
-import { createCalendarTools } from "./agent-tools.service.js";
-
-function modelName() {
-  return `openai/${process.env.AI_MODEL ?? "gpt-4o-mini"}`;
-}
 
 function messageText(content) {
   if (typeof content === "string") return content.trim();
@@ -88,8 +83,8 @@ export async function getThreadMessages(userId, threadId) {
 }
 
 export async function streamAgentReply(input) {
-  if (!process.env.OPENAI_API_KEY) {
-    throw new Error("OPENAI_API_KEY is not set env");
+  if (!process.env.OPENROUTER_API_KEY) {
+    throw new Error("OPENROUTER_API_KEY is not set in backend/.env");
   }
 
   input.onEvent({
@@ -98,44 +93,63 @@ export async function streamAgentReply(input) {
   });
 
   const memory = createAgentMemory();
-
-  const agent = new Agent({
-    id: "metting-assistant",
-    name: "Meeting Assitant",
-    instructions: getAgentInstructions({ timezone: input.timezone }),
-    model: modelName(),
-    tools: createCalendarTools(input.userId),
-    memory,
+  const existingThread = await memory.getThreadById({
+    threadId: input.threadId,
+    resourceId: input.userId,
   });
 
-  const result = await agent.stream(input.message, {
-    memory: {
-      resource: input.userId,
-      thread: input.threadId,
+  if (!existingThread) {
+    await memory.createThread({
+      threadId: input.threadId,
+      resourceId: input.userId,
+      title: "",
+    });
+  }
+
+  const recalled = await memory.recall({
+    threadId: input.threadId,
+    resourceId: input.userId,
+    perPage: 20,
+  });
+
+  const client = new OpenRouter({
+    apiKey: process.env.OPENROUTER_API_KEY,
+    httpReferer: process.env.OPENROUTER_HTTP_REFERER,
+    appTitle: process.env.OPENROUTER_TITLE ?? "Agentic Calendar Assistant",
+  });
+
+  const completion = await client.chat.send({
+    chatRequest: {
+      model: process.env.AI_MODEL ?? "openai/gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content: getAgentInstructions({ timezone: input.timezone }),
+        },
+        ...recalled.messages
+          .map((message) => ({
+            role:
+              message.role === "assistant" || message.role === "user"
+                ? message.role
+                : "user",
+            content: messageText(message.content),
+          }))
+          .filter((message) => message.content),
+        { role: "user", content: input.message },
+      ],
     },
   });
 
-  for await (const chunk of result.fullStream) {
-    if (chunk.type === "tool-call") {
-      input.onEvent({
-        type: "progress",
-        message: `Running ${chunk.payload.toolName}`,
-      });
-
-      continue;
-    }
-
-    if (chunk.type === "text-delta") {
-      const text = chunk.payload.text;
-
-      if (text) {
-        input.onEvent({
-          type: "token",
-          token: text,
-        });
-      }
-    }
+  if (completion instanceof ReadableStream) {
+    throw new Error("OpenRouter returned an unexpected streaming response");
   }
+
+  const text = completion.choices[0]?.message?.content;
+  if (typeof text !== "string" || !text.trim()) {
+    throw new Error("The AI service returned an empty response.");
+  }
+
+  input.onEvent({ type: "token", token: text });
 
   const thread = await memory.getThreadById({
     threadId: input.threadId,

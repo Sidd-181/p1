@@ -61,8 +61,23 @@ agentRoutes.post("/chat", async (req, res) => {
   res.setHeader("Connection", "keep-alive");
   res.flushHeaders();
 
+  let clientDisconnected = false;
+  const heartbeat = setInterval(() => {
+    if (!clientDisconnected && !res.writableEnded) {
+      res.write(": keep-alive\n\n");
+    }
+  }, 15000);
+
+  const markClientDisconnected = () => {
+    clientDisconnected = true;
+  };
+
+  req.on("aborted", markClientDisconnected);
+  res.on("close", markClientDisconnected);
+  res.on("error", markClientDisconnected);
+
   const write = (event) => {
-    if (!res.writableEnded) {
+    if (!clientDisconnected && !res.writableEnded && !res.destroyed) {
       res.write(`data: ${JSON.stringify(event)}\n\n`);
     }
   };
@@ -82,7 +97,8 @@ agentRoutes.post("/chat", async (req, res) => {
       error instanceof Error ? error.message : "Agent request failed";
     write({ type: "error", message });
   } finally {
-    if (!res.writableEnded) {
+    clearInterval(heartbeat);
+    if (!clientDisconnected && !res.writableEnded) {
       res.end();
     }
   }

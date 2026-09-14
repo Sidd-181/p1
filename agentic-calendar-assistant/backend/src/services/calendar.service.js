@@ -1,5 +1,6 @@
 import { google } from "googleapis";
 import { randomUUID } from "node:crypto";
+import { getGoogleConfig } from "../config/google.js";
 import { getCalendarAccessToken } from "./token.service.js";
 
 function calendarClient(accessToken) {
@@ -22,6 +23,10 @@ async function calendarForUser(userId) {
 
   const accessToken = await getCalendarAccessToken(userId);
   return calendarClient(accessToken);
+}
+
+function getCalendarId() {
+  return getGoogleConfig().calendarId;
 }
 
 function formatEvent(event) {
@@ -71,7 +76,7 @@ export async function listUpcomingMeetings(input) {
   }
 
   const response = await calendar.events.list({
-    calendarId: "primary",
+    calendarId: getCalendarId(),
     timeMin,
     ...(timeMax ? { timeMax } : {}),
     maxResults: input.maxResults ?? 10,
@@ -89,7 +94,7 @@ export async function createMeeting(input) {
   const withMeet = input.addGoogleMeet !== false;
 
   const response = await calendar.events.insert({
-    calendarId: "primary",
+    calendarId: getCalendarId(),
     sendUpdates: "all",
     ...(withMeet ? { conferenceDataVersion: 1 } : {}),
     requestBody: {
@@ -122,7 +127,7 @@ export async function cancelMeeting(input) {
   const calendar = await calendarForUser(input.userId);
 
   await calendar.events.delete({
-    calendarId: "primary",
+    calendarId: getCalendarId(),
     eventId: input.eventId,
     sendUpdates: "all",
   });
@@ -136,7 +141,7 @@ export async function rescheduleMeeting(input) {
   const calendar = await calendarForUser(input.userId);
 
   const response = await calendar.events.patch({
-    calendarId: "primary",
+    calendarId: getCalendarId(),
     eventId: input.eventId,
     sendUpdates: "all",
     requestBody: {
@@ -156,11 +161,11 @@ export async function checkCalendarBusy(input) {
     requestBody: {
       timeMin: input.startIso,
       timeMax: input.endIso,
-      items: [{ id: "primary" }],
+      items: [{ id: getCalendarId() }],
     },
   });
 
-  const busy = response.data?.calendars?.primary?.busy ?? [];
+  const busy = response.data?.calendars?.[getCalendarId()]?.busy ?? [];
 
   return {
     busy: busy.map((item) => ({

@@ -1,9 +1,12 @@
 import { config } from "dotenv";
 import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { closePool, getPool } from "../src/db/pool.js";
 
-config({ path: resolve(process.cwd(), ".env") });
+config({
+  path: resolve(fileURLToPath(new URL("../.env", import.meta.url))),
+});
 
 async function main() {
   const sqlDir = resolve(process.cwd(), "sql");
